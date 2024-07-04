@@ -72,6 +72,13 @@
 			clock-accuracy = <20000>;
 			clock-output-names = "ext-osc32k";
 		};
+
+		clk8m: clk8m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <8000000>;
+			clock-output-names = "clk8m";
+		};		
 	};
 
 	cpus {
@@ -363,10 +370,10 @@
 			#interrupt-cells = <3>;
 			#gpio-cells = <3>;
 
-			clk_out_a_pin: clk-out-a-pin {
-				pins = "PI12";
-				function = "clk_out_a";
-			};
+			//clk_out_a_pin: clk-out-a-pin {
+			//	pins = "PI12";
+			//	function = "clk_out_a";
+			//};
 
 			gmac_rgmii_pins: gmac-rgmii-pins {
 				pins = "PA0", "PA1", "PA2", "PA3",
@@ -433,29 +440,49 @@
 				function = "uart0";
 			};
 
-			uart2_pi_pins: uart2-pi-pins {
-				pins = "PI18", "PI19";
-				function = "uart2";
-			};
+			//uart2_pi_pins: uart2-pi-pins {
+			//	pins = "PI18", "PI19";
+			//	function = "uart2";
+			//};
 
 			uart3_ph_pins: uart3-ph-pins {
 				pins = "PH0", "PH1";
 				function = "uart3";
 			};
 			
-			uart3_pg_pins: uart3-pg-pins {
-				pins = "PG6", "PG7";
-				function = "uart3";
+			//uart3_pg_pins: uart3-pg-pins {
+			//	pins = "PG6", "PG7";
+			//	function = "uart3";
+			//};
+
+			//uart3_rts_cts_pg_pins: uart3-rts-cts-pg-pins {
+			//	pins = "PG8", "PG9";
+			//	function = "uart3";
+			//};
+
+			uart4_ph_pins: uart4-ph-pins {
+				pins = "PH4", "PH5";
+				function = "uart4";
 			};
 
-			uart3_rts_cts_pg_pins: uart3-rts-cts-pg-pins {
-				pins = "PG8", "PG9";
-				function = "uart3";
+			uart5_ph_pins: uart5-ph-pins {
+				pins = "PH6", "PH7";
+				function = "uart5";
+			};
+
+			uart6_pi_pins: uart6-pi-pins {
+				pins = "PI12", "PI13";
+				function = "uart6";
 			};
 
 			uart7_pi_pins: uart7-pi-pins {
 				pins = "PI20", "PI21";
 				function = "uart7";
+			};
+
+			spi1_pi_pins: spi1-pi-pins {
+				pins = "PI15", "PI17", "PI18", "PI19";
+				function = "spi1";
 			};
 		};
 
@@ -923,6 +950,20 @@
 			resets = <&ccu RST_BUS_HDMI0>;
 			reset-names = "phy";
 			#phy-cells = <0>;
+		};
+
+		spi1: spi@01c06000 {
+			compatible = "allwinner,sun8i-h3-spi";
+			reg = <0x01c06000 0x1000>;
+			interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_BUS_SPI1>, <&ccu CLK_SPI1>;
+			clock-names = "ahb", "mod";
+			pinctrl-names = "default";
+			pinctrl-0 = <&spi1_pi_pins>;
+			resets = <&ccu RST_BUS_SPI1>;
+			status = "ok";
+			#address-cells = <1>;
+			#size-cells = <0>;
 		};
 	};
 

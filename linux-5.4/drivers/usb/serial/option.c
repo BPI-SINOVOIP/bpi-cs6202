@@ -568,6 +568,28 @@ static void option_instat_callback(struct urb *urb);
 
 
 static const struct usb_device_id option_ids[] = {
+#if 1 //Added by Quectel
+	{ USB_DEVICE(0x05C6, 0x9090) }, /* Quectel UC15 */
+	{ USB_DEVICE(0x05C6, 0x9003) }, /* Quectel UC20 */
+	//{ USB_DEVICE(0x2C7C, 0x0125) }, /* Quectel EC25 */
+	{ USB_DEVICE(0x2C7C, 0x0121) }, /* Quectel EC21 */
+	{ USB_DEVICE(0x05C6, 0x9215) }, /* Quectel EC20 */
+	{ USB_DEVICE(0x2C7C, 0x0191) }, /* Quectel EG91 */
+	{ USB_DEVICE(0x2C7C, 0x0195) }, /* Quectel EG95 */
+	{ USB_DEVICE(0x2C7C, 0x0306) }, /* Quectel EG06/EP06/EM06 */
+	{ USB_DEVICE(0x2C7C, 0x0512) }, /* Quectel EG12/EP12/EM12/EG16/EG18 */
+	{ USB_DEVICE(0x2C7C, 0x0296) }, /* Quectel BG96 */
+	{ USB_DEVICE(0x2C7C, 0x0700) }, /* Quectel BG95/BG77/BG600L-M3/BC69 */
+	{ USB_DEVICE(0x2C7C, 0x0435) }, /* Quectel AG35 */
+	{ USB_DEVICE(0x2C7C, 0x0415) }, /* Quectel AG15 */
+	{ USB_DEVICE(0x2C7C, 0x0452) }, /* Quectel AG520R */
+	{ USB_DEVICE(0x2C7C, 0x0455) }, /* Quectel AG550R */
+	{ USB_DEVICE(0x2C7C, 0x0620) }, /* Quectel EG20 */
+	{ USB_DEVICE(0x2C7C, 0x0800) }, /* Quectel RG500Q/RM500Q/RG510Q/RM510Q */
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x2c7c, 0x0900, 0xff, 0x00, 0x00) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x2c7c, 0x0901, 0xff, 0x00, 0x00) },
+#endif
+
 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_COLT) },
 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_RICOLA) },
 	{ USB_DEVICE(OPTION_VENDOR_ID, OPTION_PRODUCT_RICOLA_LIGHT) },
@@ -1791,6 +1813,7 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE_AND_INTERFACE_INFO(ALINK_VENDOR_ID, ALINK_PRODUCT_3GU, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE(ALINK_VENDOR_ID, SIMCOM_PRODUCT_SIM7100E),
 	  .driver_info = RSVD(5) | RSVD(6) },
+	{ USB_DEVICE(0x1e0e, 0x901e) },
 	{ USB_DEVICE_INTERFACE_CLASS(0x1e0e, 0x9003, 0xff) },	/* Simcom SIM7500/SIM7600 MBIM mode */
 	{ USB_DEVICE_INTERFACE_CLASS(0x1e0e, 0x9011, 0xff),	/* Simcom SIM7500/SIM7600 RNDIS mode */
 	  .driver_info = RSVD(7) },
@@ -2045,6 +2068,7 @@ static int option_probe(struct usb_serial *serial,
 {
 	struct usb_interface_descriptor *iface_desc =
 				&serial->interface->cur_altsetting->desc;
+	struct usb_device_descriptor *dev_desc = &serial->dev->descriptor;
 	unsigned long device_flags = id->driver_info;
 
 	/* Never bind to the CD-Rom emulation interface	*/
@@ -2065,6 +2089,23 @@ static int option_probe(struct usb_serial *serial,
 	 */
 	if (device_flags & NUMEP2 && iface_desc->bNumEndpoints != 2)
 		return -ENODEV;
+
+	//Quectel
+	if (serial->dev->descriptor.idVendor == cpu_to_le16(QUECTEL_VENDOR_ID)) {
+		__u16 idProduct = le16_to_cpu(serial->dev->descriptor.idProduct);
+		//some interfaces can be used as USB Network device (ecm, rndis, mbim)
+		if (serial->interface->cur_altsetting->desc.bInterfaceClass != 0xFF) {
+			return -ENODEV;
+		}
+	}
+
+	/* sim7600 */
+	//Added by Simcom`
+	if (serial->dev->descriptor.idVendor == cpu_to_le16(0x1E0E) &&
+		serial->dev->descriptor.idProduct == cpu_to_le16(0x9001)
+		&& serial->interface->cur_altsetting->desc.bInterfaceNumber >= 5) {
+		return -ENODEV;
+	}
 
 	/* Store the device flags so we can use them during attach. */
 	usb_set_serial_data(serial, (void *)device_flags);

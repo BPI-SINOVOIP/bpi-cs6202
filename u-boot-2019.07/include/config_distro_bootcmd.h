@@ -407,12 +407,14 @@
 	"boot_script_dhcp=boot.scr.uimg\0" \
 	BOOTENV_BOOT_TARGETS \
 	\
-	"boot_syslinux_conf=extlinux/extlinux.conf\0" \
+	"boot_syslinux_conf_cmd=boot_syslinux_conf=extlinux/extlinux${extlinux_suffix}.conf\0" \
 	"boot_extlinux="                                                  \
 		"sysboot ${devtype} ${devnum}:${distro_bootpart} any "    \
 			"${scriptaddr} ${prefix}${boot_syslinux_conf}\0"  \
 	\
 	"scan_dev_for_extlinux="                                          \
+		"run boot_syslinux_conf_cmd; "                             \
+		"echo Finding ${prefix}${boot_syslinux_conf} ...; "     \
 		"if test -e ${devtype} "                                  \
 				"${devnum}:${distro_bootpart} "           \
 				"${prefix}${boot_syslinux_conf}; then "   \

@@ -91,6 +91,9 @@ struct at24_data {
 
 	struct gpio_desc *wp_gpio;
 
+	u8 * shadow_buffer;
+	u8 * shadow_flag;
+
 	/*
 	 * Some chips tie up multiple I2C addresses; dummy devices reserve
 	 * them for us, and we'll use them with SMBus calls.
@@ -286,7 +289,7 @@ static size_t at24_adjust_read_count(struct at24_data *at24,
 	return count;
 }
 
-static ssize_t at24_regmap_read(struct at24_data *at24, char *buf,
+static ssize_t __at24_regmap_read(struct at24_data *at24, char *buf,
 				unsigned int offset, size_t count)
 {
 	unsigned long timeout, read_time;
@@ -322,6 +325,32 @@ static ssize_t at24_regmap_read(struct at24_data *at24, char *buf,
 
 	return -ETIMEDOUT;
 }
+static ssize_t at24_regmap_read(struct at24_data *at24, char *buf,
+				unsigned int offset, size_t count)
+{
+	int i;
+	ssize_t status;
+
+	if (at24->shadow_flag && at24->shadow_buffer && (offset + count) <= at24->byte_len) {
+		for (i = 0; i < count; i++) {
+			if (at24->shadow_flag[offset + i]) {
+				buf[i] = at24->shadow_buffer[offset + i];
+			} else break;
+		}
+		if (i >= count) return count;
+	}
+
+	status = __at24_regmap_read(at24, buf, offset, count);
+
+	if (at24->shadow_flag && at24->shadow_buffer && (offset + count) <= at24->byte_len) {
+		for (i = 0; i < status; i++) {
+			at24->shadow_buffer[offset + i] = buf[i];
+			at24->shadow_flag[offset + i] = 1;
+		}
+	}
+
+	return status;
+}
 
 /*
  * Note that if the hardware write-protect pin is pulled high, the whole
@@ -349,7 +378,7 @@ static size_t at24_adjust_write_count(struct at24_data *at24,
 	return count;
 }
 
-static ssize_t at24_regmap_write(struct at24_data *at24, const char *buf,
+static ssize_t __at24_regmap_write(struct at24_data *at24, const char *buf,
 				 unsigned int offset, size_t count)
 {
 	unsigned long timeout, write_time;
@@ -381,6 +410,20 @@ static ssize_t at24_regmap_write(struct at24_data *at24, const char *buf,
 	} while (time_before(write_time, timeout));
 
 	return -ETIMEDOUT;
+}
+static ssize_t at24_regmap_write(struct at24_data *at24, const char *buf,
+				 unsigned int offset, size_t count)
+{
+	ssize_t	status = __at24_regmap_write(at24, buf, offset, count);
+	if (status > 0 && at24->shadow_flag && at24->shadow_buffer) {
+		int i = 0;
+		while (i < status && i < count && (offset + i) < at24->byte_len) {
+			at24->shadow_buffer[offset + i] = buf[i];
+			at24->shadow_flag[offset + i] = 1;
+			i++;
+		}
+	}
+	return status;	
 }
 
 static int at24_read(void *priv, unsigned int off, void *val, size_t count)
@@ -672,6 +715,15 @@ static int at24_probe(struct i2c_client *client)
 					page_size, at24_io_limit);
 		if (!i2c_fn_i2c && at24->write_max > I2C_SMBUS_BLOCK_MAX)
 			at24->write_max = I2C_SMBUS_BLOCK_MAX;
+	}
+
+	at24->shadow_buffer = devm_kzalloc(&client->dev, at24->byte_len + 32, GFP_KERNEL);
+	if (at24->shadow_buffer) {
+		memset (at24->shadow_buffer, 0, at24->byte_len);
+	}
+	at24->shadow_flag = devm_kzalloc(&client->dev, at24->byte_len + 32, GFP_KERNEL);
+	if (at24->shadow_flag) {
+		memset (at24->shadow_flag, 0, at24->byte_len);
 	}
 
 	/* use dummy devices for multiple-address chips */

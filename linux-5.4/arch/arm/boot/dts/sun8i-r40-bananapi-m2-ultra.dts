@@ -54,6 +54,7 @@
 		ethernet0 = &emac;
 		ethernet1 = &gmac;
 		serial0 = &uart0;
+		spi1 = &spi1;
 	};
 
 	chosen {
@@ -74,20 +75,28 @@
 	leds {
 		compatible = "gpio-leds";
 
-		pwr-led {
-			label = "bananapi:red:pwr";
+		cs6202_gpio_led_pwr {
+			label = "cs6202_gpio_led_pwr";
 			gpios = <&pio 4 4 GPIO_ACTIVE_HIGH>;  /* LED0 PE4 */
 			default-state = "on";
 		};
 
-		func-led-green {
-			label = "bananapi:green:func";
+		cs6202_gpio_led_func {
+			label = "cs6202_gpio_led_func";
 			gpios = <&pio 1 3 GPIO_ACTIVE_HIGH>; /* FUNC PB3 */
+			default-state = "on";
 		};
 
-		run-led-blue {
-			label = "bananapi:blue:run";
+		cs6202_gpio_led_run {
+			label = "cs6202_gpio_led_run";
 			gpios = <&pio 4 6 GPIO_ACTIVE_HIGH>; /* LED2 PE6 */
+			default-state = "heartbeat";
+		};
+
+		cs6202_gpio_4g_pwr_en {
+			label = "cs6202_gpio_4g_pwr_en";
+			gpios = <&pio 8 7 GPIO_ACTIVE_HIGH>; /* 4G-PWR-EN PI7 */
+			default-state = "on";
 		};
 	};
 
@@ -187,12 +196,54 @@
 
 &i2c1 {
 	status = "okay";
+	
+	eeprom: at24@50 {
+		compatible = "atmel,24c08";
+		reg = <0x50>;
+		pagesize = <16>;
+	};
+
+	rtc@68 {
+		compatible = "dallas,ds1340";
+		reg = <0x68>;
+	};
+
+	rtc@6f {
+		compatible = "isil,isl1208";
+		reg = <0x6f>;
+	};
+
+	smec98sp@77 {
+		compatible = "smec98sp,smec98sp";
+		reg = <0x77>;
+		myname = "smec98sp";
+	};
+};
+
+&spi1 {
+	status = "okay";
+	clock-frequency = <100000000>;
+
+	can0: can@0 {
+		status = "okay";
+		compatible = "microchip,mcp2515";
+		reg = <1>;
+		clocks = <&clk8m>;
+		interrupt-parent = <&pio>;
+		interrupts = <7 2 IRQ_TYPE_LEVEL_LOW>;	/* PH2 */
+		spi-max-frequency = <10000000>;
+	};
 };
 
 &mmc0 {
 	vmmc-supply = <&reg_dcdc1>;
 	bus-width = <4>;
-	cd-gpios = <&pio 7 2 GPIO_ACTIVE_LOW>; /* PH2 */
+
+	//	2024/06/28 CS6204_A0_sch.pdf 挪用了 CS6202_A2_sch.pdf 的用作sdc0的cd-detect的 PH2，作为 CS6204 CAN 的中断
+	//	此处，为了兼容 cs6202，不使用 cd-detect.
+	//cd-gpios = <&pio 7 2 GPIO_ACTIVE_LOW>; /* PH2 */
+	broken-cd;
+
 	status = "okay";
 };
 
@@ -225,7 +276,7 @@
 
 &pio {
 	pinctrl-names = "default";
-	pinctrl-0 = <&clk_out_a_pin>;
+//	pinctrl-0 = <&clk_out_a_pin>;
 	vcc-pa-supply = <&reg_aldo2>;
 	vcc-pc-supply = <&reg_dcdc1>;
 	vcc-pd-supply = <&reg_dcdc1>;
@@ -341,15 +392,27 @@
 	status = "okay";
 };
 
-&uart2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart2_pi_pins>;
-	status = "okay";
-};
-
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart3_ph_pins>;
+	status = "okay";
+};
+
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart4_ph_pins>;
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart5_ph_pins>;
+	status = "okay";
+};
+
+&uart6 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart6_pi_pins>;
 	status = "okay";
 };
 

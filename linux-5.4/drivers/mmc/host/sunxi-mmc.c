@@ -1171,7 +1171,7 @@ static const struct sunxi_mmc_cfg sun50i_a64_emmc_cfg = {
 	.idma_des_size_bits = 13,
 	.clk_delays = NULL,
 	.can_calibrate = true,
-	.needs_new_timings = true,
+	.needs_new_timings = false,
 };
 
 static const struct of_device_id sunxi_mmc_of_match[] = {
